@@ -14,7 +14,7 @@ android:
         - sys-img-armeabi-v7a-android-28
 
 before_script:
-    - echo "y" | android update sdk -a --no-ui --filter sys-img-armeabi-v7a-android-28,sys-img-x86_64-android-28
+    - echo "y" | android update sdk -a --no-ui --filter sys-img-armeabi-v7a-android-28,sys-img-armeabi-v7a
     - echo no | android create avd --force -n test -t android-28 --abi default/x86_64
     - emulator -avd test -no-audio -no-window &
     - android-wait-for-emulator
