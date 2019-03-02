@@ -6,6 +6,7 @@ android:
         - android-28
         - add-on
         - extra
+        - sys-img-armeabi-v7a-android-28
     licenses:
         - '.+'
 before_install:
