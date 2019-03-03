@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">good_night_baby</string>
-    <string name="title_home">Home</string>
+    <string name="title_home">Good Night Baby</string>
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>
+    <string name="record_button_name">Record</string>
 </resources>
