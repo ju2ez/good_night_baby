@@ -27,6 +27,6 @@ internal class MainActivityTest {
 
     @Test
     fun topMessage_isThere() {
-        assertEquals(5, 5)
+        assertEquals(5, 6)
     }
 }
