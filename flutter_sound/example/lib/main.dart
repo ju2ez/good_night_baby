@@ -16,136 +16,48 @@
  * along with Flutter-Sound.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'demo/demo.dart';
+import 'classes/about_us.dart';
 import 'widgetUI/widgetUIDemo.dart';
 import 'recordToStream/recordToStreamExample.dart';
 import 'livePlaybackWithBackPressure/livePlaybackWithBackPressure.dart';
 import 'livePlaybackWithoutBackPressure/livePlaybackWithoutBackPressure.dart';
 import 'soundEffect/soundEffect.dart';
 import 'streamLoop/streamLoop.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:noise_meter/noise_meter.dart';
+
 
 /*
-    This APP is just a driver to call the various Flutter Sound examples.
-    Please refer to the examples/README.md and all the examples located under the examples/lib directory.
+  This App is called Goog Night Baby. LOL.
 */
 
 void main() {
   runApp(ExamplesApp());
 }
 
-class Example
+class Button
 {
     final String title;
     final String subTitle;
-    final String description;
     final WidgetBuilder route;
 
-    /* ctor */ Example({ this.title, this.subTitle, this.description, this.route}){}
+    /* ctor */ Button({ this.title, this.subTitle, this.route}){}
 
     void go(BuildContext context) => Navigator.push(context, MaterialPageRoute<void>( builder: route));
 }
 
-final List<Example> exampleTable =
+final List<Button> buttonTable =
     [
-      Example(title: 'Demo', subTitle: 'Flutter Sound capabilities', route: (BuildContext) => Demo(), description:
-// If you update the following test, please update also the Examples/README.md file and the comment inside the dart file.
-'''This is a Demo of what it is possible to do with Flutter Sound.
-The code of this Demo app is not so simple and unfortunately not very clean :-( .
-
-The biggest interest of this Demo is that it shows most of the features of Flutter Sound :
-
-- Plays from various media with various codecs
-- Records to various media with various codecs
-- Pause and Resume control from recording or playback
-- Shows how to use a Stream for getting the playback (or recoding) events
-- Shows how to specify a callback function when a playback is terminated,
-- Shows how to record to a Stream or playback from a stream
-- Can show controls on the iOS or Android lock-screen
-- ...
-
-This Demo does not make use of the Flutter Sound UI Widgets.
-
-It would be really great if someone rewrite this demo soon'''
+      Button(title: 'Select Audio', subTitle: 'Select or Create the Audio File you want to play.', route: (BuildContext) => Demo()
       ),
+      Button(title: 'About', subTitle: 'More Information about Good Night Baby.', route: (BuildContext) => AboutUs()),
 
-      Example(title: 'WidgetUIDemo', subTitle: 'Demonstration of the UI Widget', route: (BuildContext) => WidgetUIDemo(), description:
-// If you update the following test, please update also the Examples/README.md file and the comment inside the dart file.
-'''
-This is a Demo of an App which uses the Flutter Sound UI Widgets.
+];
 
-My own feeling is that this Demo is really too much complicated for doing something very simple.
-There is too many dependencies and too many sources.
-
-I really hope that someone will write soon another simpler Demo App.
-''',
-      ),
-
-      Example(title: 'recordToStream', subTitle: 'Example of recording to Stream', route: (BuildContext) => RecordToStreamExample(), description:
-'''
-This is an example showing how to record to a Dart Stream.
-It writes all the recorded data from a Stream to a File, which is completely stupid:
-if an App wants to record something to a File, it must not use Streams.
-
-The real interest of recording to a Stream is for example to feed a Speech-to-Text engine, or for processing the Live data in Dart in real time.
-''',
-      ),
-
-      Example(title: 'livePlaybackWithoutBackPressure', subTitle: 'Live Playback without BackPressure', route: (BuildContext) => LivePlaybackWithoutBackPressure(), description:
-'''A very simple example showing how to play Live Data without back pressure.
-A very simple example showing how to play Live Data without back pressure.
-It feeds a live stream, without waiting that the Futures are completed for each block.
-This is simpler because the App does not need to await the playback for each block before playing another one.
-
-
-This example get the data from an asset file, which is completely stupid :
-if an App wants to play an asset file he must use "StartPlayerFromBuffer().
-
-Feeding Flutter Sound without back pressure is very simple but you can have two problems :
-- If your App is too fast feeding the audio channel, it can have problems with the Stream memory used.
-- The App does not have any knowledge of when the provided block is really played.
-If he does a "stopPlayer()" it will loose all the buffered data.
-
-This example uses the ```foodEvent``` object to resynchronize the output stream before doing a ```stop()```
-''',
-      ),
-
-      Example(title: 'livePlaybackWithBackPressure', subTitle: 'Live Playback with BackPressure', route: (BuildContext) => LivePlaybackWithBackPressure(), description:
-'''
-A very simple example showing how to play Live Data with back pressure.
-It feeds a live stream, waiting that the Futures are completed for each block.
-
-This example get the data from an asset file, which is completely stupid :
-if an App wants to play an asset file he must use "StartPlayerFromBuffer().
-
-If you do not need any back pressure, you can see another simple example : "LivePlaybackWithoutBackPressure.dart".
-This other example is a little bit simpler because the App does not need to await the playback for each block before
-playing another one.
-''',
-      ),
-
-      Example(title: 'soundEffect', subTitle: 'Sound Effect', route: (BuildContext) => SoundEffect(), description:
-'''
-```startPlayerFromStream()``` can be very efficient to play sound effects. For example in a game App.
-The App open the Audio Session and call ```startPlayerFromStream()``` during initialization.
-When it want to play a noise, it has just to call the verb ```feed```
-''',
-      ),
-
-
-      Example(title: 'streamLoop', subTitle: 'Loop from recorder to player', route: (BuildContext) => StreamLoop(), description:
-      '''
-```streamLoop()``` is a very simple example which connect the FlutterSoundRecorder sink 
-to the FlutterSoundPlayer Stream.
-
-Of course, we do not play to the loudspeaker to avoid a very unpleasant Larsen effect.
-
-This example does not use a new StreamController, but use directly `foodStreamController`
-from flutter_sound_player.dart.
-''',
-      ),
-
-    ];
 
 
 
@@ -154,8 +66,13 @@ class ExamplesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Sound Examples',
+      title: 'Good Night Baby',
       theme: ThemeData(
+        textTheme: GoogleFonts.ptSansTextTheme(
+          Theme.of(context).textTheme,
+        ),
+      ),
+
         // This is the theme of your application.
         //
         // Try running your application with "flutter run". You'll see the
@@ -165,19 +82,22 @@ class ExamplesApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.blue,
+        // primarySwatch: Colors.blue,
         // This makes the visual density adapt to the platform that you run
         // the app on. For desktop platforms, the controls will be smaller and
         // closer together (more dense) than on mobile platforms.
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: ExamplesAppHomePage(title: 'Flutter Sound Examples'),
+        // visualDensity: VisualDensity.adaptivePlatformDensity,
+
+
+      //),
+      home: AppHomePage(title: 'Good Night Baby'),
     );
   }
 }
 
-class ExamplesAppHomePage extends StatefulWidget {
-  ExamplesAppHomePage({Key key, this.title}) : super(key: key);
+class AppHomePage extends StatefulWidget {
+  AppHomePage({Key key, this.title}) : super(key: key);
+
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -190,31 +110,72 @@ class ExamplesAppHomePage extends StatefulWidget {
 
   final String title;
 
+
   @override
   _ExamplesHomePageState createState() => _ExamplesHomePageState();
 }
 
-class _ExamplesHomePageState extends State<ExamplesAppHomePage> {
-  Example selectedExample;
 
-  @override
-  void initState( ) {
-    selectedExample = exampleTable[0];
-    super.initState();
-    //_scrollController = ScrollController( );
+
+class _ExamplesHomePageState extends State<AppHomePage> {
+  Button selectedButton;
+  bool _isRecording = false;
+  StreamSubscription<NoiseReading> _noiseSubscription;
+  NoiseMeter _noiseMeter = new NoiseMeter();
+  double current_db = 0;
+  
+  void onData(NoiseReading noiseReading) {
+    setState(() {
+      if (!_isRecording) {
+        _isRecording = true;
+      }
+    });
+    print(noiseReading.toString());
+  }
+
+  void start() async {
+    try {
+      _noiseSubscription = _noiseMeter.noiseStream.listen(onData);
+    } catch (err) {
+      print(err);
+    }
+  }
+
+  void stop() async {
+    try {
+      if (_noiseSubscription != null) {
+        await _noiseSubscription.cancel();
+        _noiseSubscription = null;
+      }
+       setState(() {
+        _isRecording = false;
+      });
+    } catch (err) {
+      print('stopRecorder error: $err');
+    }
   }
 
 
+  @override
+  void initState( ) {
+    _isRecording = false;
+    selectedButton = buttonTable[0];
+    super.initState();
+    //_scrollController = ScrollController( );
+  }
 
   @override
   Widget build(BuildContext context) {
     Widget cardBuilder(BuildContext context, int index)
     {
-        bool isSelected = (exampleTable[index] == selectedExample);
+        bool isSelected = (buttonTable[index] == selectedButton);
         return     GestureDetector
         (
-            onTap: ( ) => setState( (){selectedExample = exampleTable[index];}),
-            child: Card(shape: RoundedRectangleBorder(),
+            onTap: ( ) => setState( (){selectedButton = buttonTable[index];}),
+            onDoubleTap: ( ) => setState( (){selectedButton.go(context);}),
+            onSecondaryTap: ( ) => setState( (){selectedButton.go(context);}),
+
+          child: Card(shape: RoundedRectangleBorder(),
               child: Container
               (
                 margin: const EdgeInsets.all( 3 ),
@@ -227,19 +188,123 @@ class _ExamplesHomePageState extends State<ExamplesAppHomePage> {
 
                 height: 50,
 
+
                 //color: isSelected ? Colors.indigo : Colors.cyanAccent,
                 child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children:[
-                      Text(exampleTable[index].title, style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
-                      Text(exampleTable[index].subTitle, style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
+                      Text(buttonTable[index].title, style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
+                      Text(buttonTable[index].subTitle, style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
+
                     ]
                 ) ,
               ),
+
               borderOnForeground: false, elevation: 3.0,
             ),
         );
+
     }
+
+    Widget recorderSection = Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                width: 156.0,
+                height: 100.0,
+                child: ClipOval(
+                  child: FlatButton(
+                    padding: EdgeInsets.all(10.0),
+                    onPressed: () {
+                      if (_isRecording == false)
+                       {start();}
+                    },
+                    child: Image(
+                      image: AssetImage('res/icons/ic_play.png'),
+                    ),
+                  ),
+                ),
+
+              ),
+
+              Container(
+                width: 66.0,
+                height: 100.0,
+                child: ClipOval(
+                  child: FlatButton(
+                    padding: EdgeInsets.all(4.0),
+                    onPressed: () {if (_isRecording == false)
+                    {stop();} },
+                    child: Image(
+                      image: AssetImage('res/icons/ic_stop.png'),
+                    ),
+                  ),
+                ),
+              ),
+
+
+
+            ],
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+          ),
+          Row(
+    children: <Widget>[
+          Container(
+            width: 222.0,
+            height: 40.0,
+            child: Text(
+                  'Press play to start Good Night Baby.'),
+                ),
+
+    ] ,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+          ),
+
+          Row(
+            children: <Widget>[
+
+                MyStatefulWidget(),
+
+
+            ] ,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+          ),
+          Row(
+            children: <Widget>[
+              Container(
+                width: 222.0,
+                height: 50.0,
+                child: Text(
+                    'Adjust the decibel threshold.'),
+              ),
+
+            ] ,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+          ),
+
+          Row(
+            children: <Widget>[
+              Container(
+                width: 222.0,
+                height: 60.0,
+                child:
+                  Text(current_db.toString() + " dB"),
+              ),
+
+            ] ,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+          ),
+
+        ]);
+
 
     Widget makeBody()
     {
@@ -258,10 +323,10 @@ class _ExamplesHomePageState extends State<ExamplesAppHomePage> {
               ),
               child:
               ListView.builder(
-                itemCount: exampleTable.length,
-                itemBuilder:  cardBuilder
+                itemCount: buttonTable.length,
+                itemBuilder:  cardBuilder,
               ),
-            ),
+              ),
           ),
 
           Expanded(
@@ -274,12 +339,12 @@ class _ExamplesHomePageState extends State<ExamplesAppHomePage> {
                 color: Color( 0xFFFAF0E6 ),
                 border: Border.all( color: Colors.indigo, width: 3, ),
               ),
-              child: SingleChildScrollView(
-                child:Text( selectedExample.description
-                    ), ),
+              child:
+              ListView(
+                children: <Widget>[recorderSection],
+              ),
             ),
           ),
-
         ],
       );
 
@@ -293,20 +358,39 @@ class _ExamplesHomePageState extends State<ExamplesAppHomePage> {
             bottomNavigationBar: BottomAppBar
       (
         color: Colors.blue,
-        child: Container
-        (
-          margin: const EdgeInsets.all( 3 ),
-          padding: const EdgeInsets.all( 3 ),
-          height: 40,
-          decoration: BoxDecoration
-          (
-            color:  Color( 0xFFFAF0E6 ),
-            border: Border.all( color: Colors.indigo, width: 3, ),
-          ),
-          child: Row ( mainAxisAlignment: MainAxisAlignment.end, children: [ RaisedButton(onPressed: () =>selectedExample.go(context), color: Colors.indigo, child: Text('GO', style: TextStyle(color: Colors.white),),)],)
-        ),
+
       ),
 
     );
   }
 }
+
+/// This is the stateful widget that the main application instantiates.
+class MyStatefulWidget extends StatefulWidget {
+  MyStatefulWidget({Key key}) : super(key: key);
+
+  @override
+  _MyStatefulWidgetState createState() => _MyStatefulWidgetState();
+}
+
+class _MyStatefulWidgetState extends State<MyStatefulWidget> {
+  double _currentSliderValue = 20;
+
+  @override
+  Widget build(BuildContext context) {
+    return Slider(
+      value: _currentSliderValue,
+      min: 0,
+      max: 200,
+      divisions: 20,
+      label: _currentSliderValue.round().toString(),
+      onChanged: (double value) {
+        setState(() {
+          _currentSliderValue = value;
+        });
+      },
+    );
+  }
+}
+
+
