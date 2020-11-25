@@ -17,8 +17,15 @@
  */
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 
+import 'package:example/widgetUI/demo_util/demo_common.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:intl/intl.dart';
 import 'demo/demo.dart';
 import 'classes/about_us.dart';
 import 'widgetUI/widgetUIDemo.dart';
@@ -29,10 +36,19 @@ import 'soundEffect/soundEffect.dart';
 import 'streamLoop/streamLoop.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:noise_meter/noise_meter.dart';
+import 'dart:typed_data' show Uint8List;
+
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart' show DateFormat;
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 
 /*
-  This App is called Goog Night Baby. LOL.
+  This App is called Google Night Baby.
 */
 
 void main() {
@@ -59,7 +75,7 @@ final List<Button> buttonTable =
 ];
 
 
-
+double db_threshold= 150;
 
 class ExamplesApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -117,12 +133,298 @@ class AppHomePage extends StatefulWidget {
 
 
 
+const int SAMPLE_RATE = 8000;
+const int BLOCK_SIZE = 4096;
+
 class _ExamplesHomePageState extends State<AppHomePage> {
   Button selectedButton;
   bool _isRecording = false;
   StreamSubscription<NoiseReading> _noiseSubscription;
   NoiseMeter _noiseMeter = new NoiseMeter();
   double current_db = 0;
+
+
+  StreamSubscription _recorderSubscription;
+  StreamSubscription _playerSubscription;
+  StreamSubscription _recordingDataSubscription;
+
+  FlutterSoundPlayer playerModule = FlutterSoundPlayer();
+  Media _media = Media.remoteExampleFile;
+  Codec _codec = Codec.aacADTS;
+  String _playerTxt = '00:00:00';
+  double _dbLevel;
+
+
+  final exampleAudioFilePath =
+      "https://file-examples-com.github.io/uploads/2017/11/file_example_MP3_700KB.mp3";
+  final albumArtPath =
+      "https://file-examples-com.github.io/uploads/2017/10/file_example_PNG_500kB.png";
+
+  List<String> _path = [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  ];
+  // Whether the user wants to use the audio player features
+  bool _isAudioPlayer = true;
+  double sliderCurrentPosition = 0.0;
+  double maxDuration = 1.0;
+
+
+  void cancelPlayerSubscriptions() {
+    if (_playerSubscription != null) {
+      _playerSubscription.cancel();
+      _playerSubscription = null;
+    }
+  }
+
+
+  void _addListeners() {
+    cancelPlayerSubscriptions();
+    _playerSubscription = playerModule.onProgress.listen((e) {
+      if (e != null) {
+        maxDuration = e.duration.inMilliseconds.toDouble();
+        if (maxDuration <= 0) maxDuration = 0.0;
+
+        sliderCurrentPosition =
+            min(e.position.inMilliseconds.toDouble(), maxDuration);
+        if (sliderCurrentPosition < 0.0) {
+          sliderCurrentPosition = 0.0;
+        }
+
+        DateTime date = new DateTime.fromMillisecondsSinceEpoch(
+            e.position.inMilliseconds,
+            isUtc: true);
+        String txt = DateFormat('mm:ss:SS', 'en_GB').format(date);
+        this.setState(() {
+          this._playerTxt = txt.substring(0, 8);
+        });
+      }
+    });
+  }
+
+  Future<void> copyAssets() async {
+    Uint8List dataBuffer =
+    (await rootBundle.load("assets/canardo.png")).buffer.asUint8List();
+    String path = await playerModule.getResourcePath() + "/assets";
+    if (!await Directory(path).exists()) {
+      await Directory(path).create(recursive: true);
+    }
+    await File(path + '/canardo.png').writeAsBytes(dataBuffer);
+  }
+
+
+  String path = "this is a test";
+
+
+
+  void Function() onStartPlayerPressed() {
+    _path[_codec.index] = path;
+    if (playerModule == null) return null;
+    if (_media == Media.file || _media == Media.stream ||
+        _media == Media.buffer) // A file must be already recorded to play it
+        {
+      if (_path[_codec.index] == null) return null;
+    }
+    if (_media == Media.remoteExampleFile &&
+        _codec != Codec.mp3) // in this example we use just a remote mp3 file
+      return null;
+
+    if (_media == Media.stream && _codec != Codec.pcm16)
+      return null;
+
+    if (_media == Media.stream && _isAudioPlayer )
+      return null;
+
+    // Disable the button if the selected codec is not supported
+    //if (!(_decoderSupported || _codec == Codec.pcm16))
+      //return null;
+
+    return (playerModule.isStopped) ? startPlayer : null;
+  }
+  Future<void> startPlayer() async {
+    try {
+      Uint8List dataBuffer;
+      String audioFilePath;
+      Codec codec = _codec;
+      if (_media == Media.asset) {
+        dataBuffer = (await rootBundle.load(assetSample[codec.index]))
+            .buffer
+            .asUint8List();
+      } else if (_media == Media.file || _media == Media.stream) {
+        // Do we want to play from buffer or from file ?
+        if (await fileExists(_path[codec.index]))
+          audioFilePath = this._path[codec.index];
+      } else if (_media == Media.buffer) {
+        // Do we want to play from buffer or from file ?
+        if (await fileExists(_path[codec.index])) {
+          dataBuffer = await makeBuffer(this._path[codec.index]);
+          if (dataBuffer == null) {
+            throw Exception('Unable to create the buffer');
+          }
+        }
+      } else if (_media == Media.remoteExampleFile) {
+        // We have to play an example audio file loaded via a URL
+        audioFilePath = exampleAudioFilePath;
+      }
+
+      // Check whether the user wants to use the audio player features
+      if (_isAudioPlayer) {
+        String albumArtUrl;
+        String albumArtAsset;
+        String albumArtFile;
+        if (_media == Media.remoteExampleFile)
+          albumArtUrl = albumArtPath;
+        else {
+          albumArtFile =
+              await playerModule.getResourcePath() + "/assets/canardo.png";
+          print(albumArtFile);
+        }
+
+        final track = Track(
+          trackPath: audioFilePath,
+          codec: _codec,
+          dataBuffer: dataBuffer,
+          trackTitle: "This is a record",
+          trackAuthor: "from flutter_sound",
+          albumArtUrl: albumArtUrl,
+          albumArtAsset: albumArtAsset,
+          albumArtFile: albumArtFile,
+        );
+        await playerModule.startPlayerFromTrack(track,
+            defaultPauseResume: false,
+            removeUIWhenStopped: true,
+            whenFinished: () {
+              print('I hope you enjoyed listening to this song');
+              setState(() {});
+            }, onSkipBackward: () {
+              print('Skip backward');
+              stopPlayer();
+              startPlayer();
+            }, onSkipForward: () {
+              print('Skip forward');
+              stopPlayer();
+              startPlayer();
+            }, onPaused: (bool b) {
+              if (b)
+                playerModule.pausePlayer();
+              else
+                playerModule.resumePlayer();
+            });
+      } else
+      if (_media == Media.stream){
+        await playerModule.startPlayerFromStream(
+          codec: _codec,
+          numChannels: 1,
+          sampleRate: SAMPLE_RATE,
+        );
+        _addListeners();
+        setState(() {});
+        await feedHim(audioFilePath);
+        //await finishPlayer();
+        await stopPlayer();
+        return;
+
+      } else {
+        if (audioFilePath != null) {
+
+          await playerModule.startPlayer(
+              fromURI: audioFilePath,
+              codec: codec,
+              sampleRate:  SAMPLE_RATE,
+              whenFinished: () {
+                print('Play finished');
+                setState(() {});
+              });
+        } else if (dataBuffer != null) {
+          if (codec == Codec.pcm16) {
+            dataBuffer = await flutterSoundHelper.pcmToWaveBuffer(
+              inputBuffer: dataBuffer,
+              numChannels: 1,
+              sampleRate: (_codec == Codec.pcm16 && _media == Media.asset)? 48000 : SAMPLE_RATE,
+            );
+            codec = Codec.pcm16WAV;
+          }
+          await playerModule.startPlayer(
+              fromDataBuffer: dataBuffer,
+              sampleRate:   SAMPLE_RATE,
+
+              codec: codec,
+              whenFinished: () {
+                print('Play finished');
+                setState(() {});
+              });
+        }
+      }
+      _addListeners();
+      setState(() {});
+      print('<--- startPlayer');
+    } catch (err) {
+      print('error: $err');
+    }
+  }
+
+  Future<void> stopPlayer() async {
+    try {
+      await playerModule.stopPlayer();
+      print('stopPlayer');
+      if (_playerSubscription != null) {
+        _playerSubscription.cancel();
+        _playerSubscription = null;
+      }
+      sliderCurrentPosition = 0.0;
+    } catch (err) {
+      print('error: $err');
+    }
+    this.setState(() {
+    });
+  }
+
+  Future<void> feedHim(String path) async
+  {
+    Uint8List data = await _readFileByte(path);
+    return playerModule.feedFromStream(data);
+  }
+
+  Future<Uint8List> _readFileByte(String filePath) async {
+    Uri myUri = Uri.parse(filePath);
+    File audioFile = new File.fromUri(myUri);
+
+    Uint8List bytes;
+    await audioFile.readAsBytes().then((value) {
+      bytes = Uint8List.fromList(value);
+      print('reading of bytes is completed');
+    });
+    return bytes;
+  }
+
+
+
+  void check_db() {
+    if (current_db > db_threshold){
+      print("now play the audio!");
+      print(current_db);
+      print(db_threshold);
+      onStartPlayerPressed();
+      startPlayer();
+
+      startTimeout(5000);
+      //wait for audio
+    }
+    }
+
+
   
   void onData(NoiseReading noiseReading) {
     setState(() {
@@ -130,7 +432,9 @@ class _ExamplesHomePageState extends State<AppHomePage> {
         _isRecording = true;
       }
     });
-    print(noiseReading.toString());
+    current_db = noiseReading.meanDecibel.truncateToDouble();
+    check_db();
+
   }
 
   void start() async {
@@ -236,7 +540,7 @@ class _ExamplesHomePageState extends State<AppHomePage> {
                 child: ClipOval(
                   child: FlatButton(
                     padding: EdgeInsets.all(4.0),
-                    onPressed: () {if (_isRecording == false)
+                    onPressed: () {if (_isRecording == true)
                     {stop();} },
                     child: Image(
                       image: AssetImage('res/icons/ic_stop.png'),
@@ -387,10 +691,27 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> {
       onChanged: (double value) {
         setState(() {
           _currentSliderValue = value;
+          db_threshold = _currentSliderValue;
         });
       },
     );
   }
 }
+
+
+const timeout = const Duration(seconds: 3);
+const ms = const Duration(milliseconds: 1);
+var start_playing_audio = false;
+
+Timer startTimeout([int milliseconds]) {
+  var duration = milliseconds == null ? timeout : ms * milliseconds;
+  return new Timer(duration, handleTimeout);
+}
+
+
+void handleTimeout() {
+  // callback function
+}
+
 
 
